@@ -1,38 +1,50 @@
 ﻿using System;
 
-public class CharacterStatsWrapper
+using UnityEngine;
+
+public class CharacterStatsWrapper : CharacterBaseWrapper<CharacterStatsHolder>
 {
-    private readonly CharacterStatsHolder characterStats;
-    private readonly CharacterSheetController characterSheetController;
-
     public CharacterStatsWrapper(CharacterStatsHolder characterStats, CharacterSheetController characterSheetController)
+        : base(characterStats, characterSheetController)
     {
-        this.characterStats = characterStats;
-        this.characterSheetController = characterSheetController;
-
-        characterStats.playerNameInput.onValueChanged.AddListener((input) => characterSheetController.CharacterSheet.PlayerName = input);
-
         foreach(CharacteristicType type in Enum.GetValues(typeof(CharacteristicType)))
         {
-            characterStats.GetCharacteristicInput(type).onValueChanged.AddListener((text) =>
+            var inputField = characterStats.GetCharacteristicInput(type);
+            inputField.onValueChanged.AddListener((text) =>
             {
-                characterSheetController.CharacterSheet[type] = Convert.ToInt32(text);
+                if (!Int32.TryParse(text, out int statValue))
+                    return;
+
+                if (statValue < 1 || statValue > 30)
+                {
+                    statValue = Mathf.Clamp(statValue, 1, 30);
+                    inputField.text = statValue.ToString();
+                }
+                characterSheetController.Character[type] = statValue;
             });
+            inputField.onValidateInput += InputFieldUtility.ValidateUnsignedNumberValue;
         }
     }
 
-    public void OnCharacterChanged()
+    public override void OnCharacterChanged()
     {
-        var sheet = characterSheetController.CharacterSheet;
+        var sheet = characterSheetController.Character;
         if (sheet == null)
             // TODO: disable all inputs and value holders
             return;
 
-        characterStats.playerNameInput.text = sheet.PlayerName;
-
         foreach (CharacteristicType type in Enum.GetValues(typeof(CharacteristicType)))
         {
-            characterStats.GetCharacteristicInput(type).text = sheet[type].ToString();
+            SetCharacteristic(type, sheet[type]);
         }
+
+        characterSheetController.Character.OnCharacteristicChanged += SetCharacteristic;
+    }
+
+    private void SetCharacteristic(CharacteristicType type, int statValue)
+    {
+        characterHolder.GetCharacteristicInput(type).text = statValue.ToString();
+        int modificator = CharacterValuesUtility.GetCharacteristicModificator(statValue);
+        characterHolder.GetCharacteristicModificatorText(type).text = TextUtility.GetSignedValueString(modificator);
     }
 }

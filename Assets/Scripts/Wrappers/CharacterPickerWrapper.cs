@@ -1,4 +1,6 @@
 ﻿
+using System.Linq;
+
 public class CharacterPickerWrapper
 {
     private readonly CharacterListController characterList;
@@ -23,7 +25,7 @@ public class CharacterPickerWrapper
     {
         characterList.Clear();
 
-        foreach(var character in CharacterSheetStorage.characters)
+        foreach(var character in CharacterSheetStorage.characters.OrderBy((sheet => sheet.CreatedDate)))
         {
             characterList.AddItem(character);
         }
@@ -39,7 +41,7 @@ public class CharacterPickerWrapper
         });
         preview.removeButton.onClick.AddListener(() =>
         {
-            characterList.RemoveItem(preview);
+            MessageBoxController.Instance.ShowYesNoMessage("Вы хотите удалить этого персонажа?", () => characterList.RemoveItem(preview));
         });
 
         preview.playerNameText.text = sheet.PlayerName;
